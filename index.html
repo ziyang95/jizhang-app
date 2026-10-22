@@ -150,7 +150,16 @@ function renderStats(){
  rows.forEach(([name,value])=>{const row=document.createElement("div");row.className="barrow";const label=document.createElement("div");label.className="barlabel";const n=document.createElement("span");n.textContent=name;const v=document.createElement("strong");v.textContent=`${fmtMoney(value)} · ${Math.round(value/total*100)}%`;label.append(n,v);const track=document.createElement("div");track.className="track";const fill=document.createElement("div");fill.className="fill";fill.style.width=`${value/total*100}%`;track.append(fill);row.append(label,track);host.append(row)});
 }
 function openAdd(kind="expense"){
- entryKind=kind;chosenCategory=(kind==="expense"?expenseCats:incomeCats)[0][0];$("amountInput").value="";$("noteInput").value="";$("dateInput").value=dateKey(new Date());setKind(kind);renderCategories();renderAccountSelect();$("addDialog").showModal();setTimeout(()=>$("amountInput").focus({preventScroll:true}),180)
+ try {
+  entryKind=kind;
+  chosenCategory=(kind==="expense"?expenseCats:incomeCats)[0][0];
+  $("amountInput").value=""; $("noteInput").value=""; $("dateInput").value=dateKey(new Date());
+  setKind(kind); renderCategories(); renderAccountSelect();
+  const dialog=$("addDialog");
+  if(typeof dialog.showModal==="function"){if(!dialog.open)dialog.showModal();}
+  else {dialog.setAttribute("open","");dialog.style.display="block";dialog.style.position="fixed";dialog.style.inset="auto 0 0 0";dialog.style.zIndex="20";}
+  setTimeout(()=>{try{$("amountInput").focus({preventScroll:true})}catch(e){}},180);
+ } catch(err) { console.error("openAdd failed",err); toast("打开记账窗口失败，请刷新页面后重试"); }
 }
 function setKind(kind){entryKind=kind;$("typeExpense").classList.toggle("selected",kind==="expense");$("typeIncome").classList.toggle("selected",kind==="income")}
 function renderCategories(){const grid=$("categoryGrid");grid.innerHTML="";(entryKind==="expense"?expenseCats:incomeCats).forEach(([name,icon])=>{const b=document.createElement("button");b.type="button";b.className="category"+(name===chosenCategory?" selected":"");const i=document.createElement("span");i.textContent=icon;b.append(i,document.createTextNode(name));b.addEventListener("click",()=>{chosenCategory=name;renderCategories()});grid.append(b)})}
@@ -160,9 +169,9 @@ $("addAccountBtn").onclick=addAccount;$("accountSelect").addEventListener("chang
 $("topAdd").onclick=()=>openAdd();$("quickExpense").onclick=()=>openAdd("expense");$("quickIncome").onclick=()=>openAdd("income");
 $("prevMonth").onclick=$("statsPrev").onclick=()=>changeMonth(-1);$("nextMonth").onclick=$("statsNext").onclick=()=>changeMonth(1);
 $("typeExpense").onclick=()=>{setKind("expense");chosenCategory=expenseCats[0][0];renderCategories()};$("typeIncome").onclick=()=>{setKind("income");chosenCategory=incomeCats[0][0];renderCategories()};
-$("closeDialog").onclick=()=>$("addDialog").close();
-$("addDialog").addEventListener("click",e=>{if(e.target===$("addDialog"))$("addDialog").close()});
-$("entryForm").addEventListener("submit",e=>{e.preventDefault();const raw=$("amountInput").value.trim().replace(/，/g,".").replace(/,/g,".");const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){toast("请输入大于 0 的有效金额");return}const date=$("dateInput").value;if(!date){toast("请选择日期");return}entries.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random(),amount:Math.round(amount*100)/100,kind:entryKind,accountId:$("accountSelect").value,category:chosenCategory,note:$("noteInput").value.trim(),date,created:Date.now()});persist();$("addDialog").close();render();toast("已保存到本机")});
+$("closeDialog").onclick=()=>{const d=$("addDialog");if(typeof d.close==="function")d.close();else{d.removeAttribute("open");d.style.display="";d.style.position="";d.style.inset="";d.style.zIndex=""}};
+$("addDialog").addEventListener("click",e=>{if(e.target===$("addDialog")){const d=$("addDialog");if(typeof d.close==="function")d.close();else{d.removeAttribute("open");d.style.display="";d.style.position="";d.style.inset="";d.style.zIndex=""}}});
+$("entryForm").addEventListener("submit",e=>{e.preventDefault();const raw=$("amountInput").value.trim().replace(/，/g,".").replace(/,/g,".");const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){toast("请输入大于 0 的有效金额");return}const date=$("dateInput").value;if(!date){toast("请选择日期");return}entries.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random(),amount:Math.round(amount*100)/100,kind:entryKind,accountId:$("accountSelect").value,category:chosenCategory,note:$("noteInput").value.trim(),date,created:Date.now()});persist();const d=$("addDialog");if(typeof d.close==="function")d.close();else{d.removeAttribute("open");d.style.display="";d.style.position="";d.style.inset="";d.style.zIndex=""}render();toast("已保存到本机")});
 $("statsExpense").onclick=()=>{statsKind="expense";renderStats()};$("statsIncome").onclick=()=>{statsKind="income";renderStats()};
 function download(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $("exportBtn").onclick=()=>{const rows=[["日期","类型","分类","账户","金额(CNY)","备注"],...entries.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[e.date,e.kind==="income"?"收入":"支出",e.category,accountById(e.accountId)?.name||"未指定账户",Number(e.amount).toFixed(2),e.note])];const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");download("记账账单.csv",csv,"text/csv;charset=utf-8");toast("已生成 CSV 文件")};
