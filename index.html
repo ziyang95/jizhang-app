@@ -161,6 +161,7 @@ function openAdd(kind="expense"){
   setTimeout(()=>{try{$("amountInput").focus({preventScroll:true})}catch(e){}},180);
  } catch(err) { console.error("openAdd failed",err); toast("打开记账窗口失败，请刷新页面后重试"); }
 }
+window.openAdd = openAdd;
 function setKind(kind){entryKind=kind;$("typeExpense").classList.toggle("selected",kind==="expense");$("typeIncome").classList.toggle("selected",kind==="income")}
 function renderCategories(){const grid=$("categoryGrid");grid.innerHTML="";(entryKind==="expense"?expenseCats:incomeCats).forEach(([name,icon])=>{const b=document.createElement("button");b.type="button";b.className="category"+(name===chosenCategory?" selected":"");const i=document.createElement("span");i.textContent=icon;b.append(i,document.createTextNode(name));b.addEventListener("click",()=>{chosenCategory=name;renderCategories()});grid.append(b)})}
 function changeMonth(delta){month=new Date(month.getFullYear(),month.getMonth()+delta,1);render()}
@@ -183,6 +184,36 @@ load();renderAccountSelect();render();renderAccounts();persist();
 if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 
+<script>
+// Failsafe click handlers for the three primary entry points. Capture phase ensures
+// the buttons still respond even if a browser's earlier inline initialization fails.
+document.addEventListener("click", function(e) {
+  const target = e.target && e.target.closest ? e.target.closest("#topAdd, #quickExpense, #quickIncome") : null;
+  if (!target) return;
+  e.preventDefault();
+  try {
+    const kind = target.id === "quickIncome" ? "income" : "expense";
+    const dialog = document.getElementById("addDialog");
+    if (!dialog) { alert("记账窗口未加载，请刷新页面重试"); return; }
+    if (typeof window.openAdd === "function") { window.openAdd(kind); return; }
+    // Fallback initialization when main script could not expose its function.
+    const amount = document.getElementById("amountInput");
+    const date = document.getElementById("dateInput");
+    const form = document.getElementById("entryForm");
+    if (!form || !amount || !date) { alert("记账功能加载不完整，请重新发布页面后刷新"); return; }
+    const income = document.getElementById("typeIncome");
+    const expense = document.getElementById("typeExpense");
+    if (income && expense) {
+      income.classList.toggle("selected", kind === "income");
+      expense.classList.toggle("selected", kind === "expense");
+    }
+    amount.value = "";
+    date.value = new Date().toISOString().slice(0,10);
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else { dialog.setAttribute("open", ""); dialog.style.display = "block"; dialog.style.position = "fixed"; dialog.style.inset = "auto 0 0 0"; dialog.style.zIndex = "9999"; }
+  } catch (err) { console.error(err); alert("打开记账窗口失败，请刷新页面后重试"); }
+}, true);
+</script>
 <script>
 // Disable pinch/double-tap page zoom on iOS; normal scrolling and taps remain available.
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, {passive:false});
