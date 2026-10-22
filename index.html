@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f5f5fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -181,5 +181,12 @@ $("importFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;
 $("clearBtn").onclick=()=>{if(confirm("确定清空全部账单吗？此操作无法撤销。建议先导出备份。")){entries=[];persist();render();toast("已清空账单")}};
 load();renderAccountSelect();render();renderAccounts();persist();
 if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+
+<script>
+// Disable pinch/double-tap page zoom on iOS; normal scrolling and taps remain available.
+document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, {passive:false});
+document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, {passive:false});
+document.addEventListener('gestureend', function(e){ e.preventDefault(); }, {passive:false});
 </script>
 </body></html>
